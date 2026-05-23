@@ -197,10 +197,230 @@ async function extractFromPdf() {
     const content = await page.getTextContent();
     text += content.items.map((item) => item.str).join(" ") + "\n";
   }
+  setStatus("Running local extraction...");
   const extracted = parseSdsText(text);
-  applyExtracted(extracted);
+  setStatus("Running AI review...");
+  const reviewed = await reviewExtractionWithAi(text, extracted);
+  const finalExtraction = reviewed.extraction || extracted;
+  const statusSuffix = reviewed.usedAi
+    ? buildAiReviewStatus(reviewed)
+    : reviewed.reason || "AI review unavailable, using local extraction.";
+  applyExtracted(finalExtraction);
   buildAssessment();
-  setStatus("PDF extraction complete.");
+  setStatus(`PDF extraction complete. ${statusSuffix}`);
+}
+
+async function reviewExtractionWithAi(sourceText, initialExtraction) {
+  const settings = readAiSettings();
+  if (!settings.apiKey?.trim() || !settings.model?.trim() || !settings.provider?.trim()) {
+    return { usedAi: false, extraction: initialExtraction, warnings: [], reason: "AI review unavailable, using local extraction." };
+  }
+
+  const prompt = [
+    "You are reviewing a first-pass structured extraction from an SDS PDF.",
+    "Check it for flaws, OCR mistakes, unsupported values, missing values that are explicitly present, and wrongly normalized names.",
+    "Correct the extraction only when the source text clearly supports the correction.",
+    "Preserve empty fields if the source does not support a value.",
+    "Return strict JSON with this schema only:",
+    "{",
+    '  "name": string,',
+    '  "cas": string,',
+    '  "ghsCodes": string,',
+    '  "signalWord": string,',
+    '  "physicalForm": string,',
+    '  "concentration": string,',
+    '  "notes": string,',
+    '  "warnings": string[],',
+    '  "missingFields": string[],',
+    '  "confidence": "high" | "medium" | "low"',
+    "}",
+    "",
+    `Initial extraction JSON:\n${JSON.stringify(initialExtraction, null, 2)}`,
+    "",
+    `Source SDS text:\n${sourceText}`,
+  ].join("\n");
+
+  try {
+    const rawResponse = await callAiReview(settings, prompt);
+    const reviewed = sanitizeAiReview(parseAiJson(rawResponse), initialExtraction);
+    return { usedAi: true, ...reviewed };
+  } catch (error) {
+    return {
+      usedAi: false,
+      extraction: initialExtraction,
+      warnings: [],
+      reason: `AI review failed, using local extraction (${error?.message || String(error)}).`,
+    };
+  }
+}
+
+async function callAiReview(settings, prompt) {
+  switch (settings.provider) {
+    case "gemini":
+      return callGeminiReview(settings, prompt);
+    case "anthropic":
+      return callAnthropicReview(settings, prompt);
+    case "openai":
+    case "groq":
+    case "openrouter":
+    case "custom":
+      return callOpenAiCompatibleReview(settings, prompt);
+    default:
+      throw new Error(`Unsupported AI provider: ${settings.provider}`);
+  }
+}
+
+async function callGeminiReview(settings, prompt) {
+  const apiKey = settings.apiKey.trim();
+  const model = settings.model.trim();
+  const baseUrl = settings.baseUrl.trim() || "https://generativelanguage.googleapis.com/v1beta";
+  const response = await fetch(`${baseUrl}/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0,
+        topP: 0.1,
+        responseMimeType: "application/json",
+      },
+    }),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data?.error?.message || "Gemini request failed.");
+  }
+  const text = data?.candidates?.[0]?.content?.parts?.map((part) => part?.text || "").join("\n").trim();
+  if (!text) throw new Error("Gemini returned an empty response.");
+  return text;
+}
+
+async function callAnthropicReview(settings, prompt) {
+  const response = await fetch(resolveAnthropicUrl(settings), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": settings.apiKey.trim(),
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: settings.model.trim(),
+      max_tokens: 1500,
+      temperature: 0,
+      system: settings.systemPrompt,
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data?.error?.message || "Anthropic request failed.");
+  }
+  const text = data?.content?.map((part) => part?.text || "").join("\n").trim();
+  if (!text) throw new Error("Anthropic returned an empty response.");
+  return text;
+}
+
+async function callOpenAiCompatibleReview(settings, prompt) {
+  const response = await fetch(resolveOpenAiCompatibleUrl(settings), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${settings.apiKey.trim()}`,
+    },
+    body: JSON.stringify({
+      model: settings.model.trim(),
+      temperature: 0,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: settings.systemPrompt },
+        { role: "user", content: prompt },
+      ],
+    }),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data?.error?.message || "AI review request failed.");
+  }
+  const text = data?.choices?.[0]?.message?.content?.trim();
+  if (!text) throw new Error("AI provider returned an empty response.");
+  return text;
+}
+
+function resolveOpenAiCompatibleUrl(settings) {
+  if (settings.baseUrl.trim()) {
+    return settings.baseUrl.trim().replace(/\/$/, "");
+  }
+  switch (settings.provider) {
+    case "openai":
+      return "https://api.openai.com/v1/chat/completions";
+    case "groq":
+      return "https://api.groq.com/openai/v1/chat/completions";
+    case "openrouter":
+      return "https://openrouter.ai/api/v1/chat/completions";
+    case "custom":
+      throw new Error("Custom provider requires a Base URL.");
+    default:
+      throw new Error(`Unsupported OpenAI-compatible provider: ${settings.provider}`);
+  }
+}
+
+function resolveAnthropicUrl(settings) {
+  return settings.baseUrl.trim() || "https://api.anthropic.com/v1/messages";
+}
+
+function parseAiJson(value) {
+  const text = String(value || "").trim();
+  if (!text) throw new Error("AI review returned empty text.");
+  try {
+    return JSON.parse(text);
+  } catch (_error) {
+    const fenced = text.match(/```(?:json)?\s*([\s\S]+?)\s*```/i)?.[1];
+    if (fenced) return JSON.parse(fenced);
+    const jsonBlock = text.match(/\{[\s\S]*\}/)?.[0];
+    if (jsonBlock) return JSON.parse(jsonBlock);
+    throw new Error("AI review did not return valid JSON.");
+  }
+}
+
+function sanitizeAiReview(reviewed, fallback) {
+  const safe = reviewed && typeof reviewed === "object" ? reviewed : {};
+  const extraction = {
+    name: canonicalizeChemicalName(safe.name || fallback.name || ""),
+    cas: normalizeFlatString(safe.cas ?? fallback.cas),
+    ghsCodes: normalizeAiCodes(safe.ghsCodes ?? fallback.ghsCodes),
+    signalWord: normalizeFlatString(safe.signalWord ?? fallback.signalWord),
+    physicalForm: normalizeFlatString(safe.physicalForm ?? fallback.physicalForm),
+    concentration: normalizeFlatString(safe.concentration ?? fallback.concentration),
+    notes: normalizeFlatString(safe.notes ?? fallback.notes),
+  };
+  return {
+    extraction,
+    warnings: Array.isArray(safe.warnings) ? safe.warnings.map(normalizeFlatString).filter(Boolean) : [],
+    missingFields: Array.isArray(safe.missingFields) ? safe.missingFields.map(normalizeFlatString).filter(Boolean) : [],
+    confidence: ["high", "medium", "low"].includes(String(safe.confidence || "").toLowerCase())
+      ? String(safe.confidence).toLowerCase()
+      : "medium",
+  };
+}
+
+function normalizeFlatString(value) {
+  return String(value ?? "").replace(/\s+/g, " ").trim();
+}
+
+function normalizeAiCodes(value) {
+  return unique(
+    String(value ?? "")
+      .split(/[;,\s]+/)
+      .map((item) => item.trim().toUpperCase())
+      .filter((item) => /^(?:EUH\d+|H\d{3})$/.test(item))
+  ).join(";");
+}
+
+function buildAiReviewStatus(reviewed) {
+  const parts = [`AI review complete (${reviewed.confidence} confidence)`];
+  if (reviewed.warnings?.length) parts.push(`warnings: ${reviewed.warnings.slice(0, 2).join("; ")}`);
+  if (reviewed.missingFields?.length) parts.push(`missing: ${reviewed.missingFields.slice(0, 3).join(", ")}`);
+  return parts.join(". ") + ".";
 }
 
 function parseSdsText(text) {

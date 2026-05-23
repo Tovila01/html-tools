@@ -99,6 +99,7 @@ Return valid JSON only.</textarea>
             <span>SDS PDF</span>
             <input id="pdfFile" type="file" accept="application/pdf" />
           </label>
+          <button id="chooseFolderButton" class="button" type="button">Choose Save Folder</button>
           <button id="extractPdfButton" class="button button-primary" type="button">Extract from PDF</button>
           <button id="buildButton" class="button" type="button">Build Assessment</button>
           <button id="previewWorkbookButton" class="button" type="button">Preview XLSX</button>
@@ -106,6 +107,7 @@ Return valid JSON only.</textarea>
         </div>
 
         <p id="status" class="status">Ready.</p>
+        <p id="saveFolderStatus" class="save-folder-status">Save folder: browser download default</p>
 
         <div class="grid">
           <label>
@@ -138,7 +140,9 @@ Return valid JSON only.</textarea>
           </label>
           <label>
             <span>Location</span>
-            <input id="location" type="text" />
+            <select id="location">
+              <option value="">Select location</option>
+            </select>
           </label>
           <label>
             <span>Date</span>

@@ -72,6 +72,16 @@ const STANDARD_TEXT = {
   },
 };
 
+const LOCATION_OPTIONS = [
+  "A1", "A2", "A3", "A4", "A5",
+  "B2", "B3", "B4",
+  "C3",
+  "D1", "D2", "D3", "D4",
+  "E1", "E2", "E3", "E4", "E5", "E6", "E7", "E8", "E9",
+  "F2", "F3", "F4", "F6",
+  "G1", "G2", "G4", "G7",
+];
+
 const AI_SETTINGS_STORAGE_KEY = "safety-assessment-generator-ai-settings";
 const AI_SETTINGS_VERSION = 3;
 const DEFAULT_AI_SETTINGS = {
@@ -140,6 +150,7 @@ const aiSettingsForm = {
 
 const ui = {
   status: document.querySelector("#status"),
+  saveFolderStatus: document.querySelector("#saveFolderStatus"),
   versionStamp: document.querySelector("#versionStamp"),
   riskRating: document.querySelector("#riskRating"),
   hazardTags: document.querySelector("#hazardTags"),
@@ -153,6 +164,9 @@ const ui = {
   workbookPreviewMeta: document.querySelector("#workbookPreviewMeta"),
 };
 
+let saveDirectoryHandle = null;
+
+document.querySelector("#chooseFolderButton").addEventListener("click", () => runSafely(chooseSaveFolder));
 document.querySelector("#extractPdfButton").addEventListener("click", () => runSafely(extractFromPdf));
 document.querySelector("#buildButton").addEventListener("click", () => runSafely(buildAssessment));
 document.querySelector("#previewWorkbookButton").addEventListener("click", () => runSafely(previewWorkbook));
@@ -336,9 +350,7 @@ function downloadWorkbook() {
   const firstAid = summarizeFirstAid(assessment.hazardTags);
   const wb = buildWorkbook(row, assessment, entries, firstAid);
   const baseName = slugify(row.name || "chemical");
-  XLSX.writeFile(wb, `${baseName}.xlsx`);
-  renderWorkbookPreview(wb, row.name || "chemical");
-  setStatus(`Downloaded ${baseName}.xlsx`);
+  return saveWorkbookFile(wb, `${baseName}.xlsx`, row.name || "chemical");
 }
 
 function previewWorkbook() {
@@ -567,8 +579,54 @@ async function runSafely(action) {
 
 function initializeApp() {
   updateVersionStamp();
+  populateLocationOptions();
+  updateSaveFolderStatus();
   loadAiSettings();
   renderAssessment();
+}
+
+function populateLocationOptions() {
+  const currentValue = form.location.value;
+  form.location.innerHTML = '<option value="">Select location</option>';
+  for (const location of LOCATION_OPTIONS) {
+    const option = document.createElement("option");
+    option.value = location;
+    option.textContent = location;
+    if (location === currentValue) option.selected = true;
+    form.location.appendChild(option);
+  }
+}
+
+async function chooseSaveFolder() {
+  if (!window.showDirectoryPicker) {
+    setStatus("Folder picker is not supported in this browser. Using normal browser download instead.");
+    return;
+  }
+  saveDirectoryHandle = await window.showDirectoryPicker({ mode: "readwrite" });
+  updateSaveFolderStatus();
+  setStatus("Save folder selected.");
+}
+
+function updateSaveFolderStatus() {
+  ui.saveFolderStatus.textContent = saveDirectoryHandle
+    ? `Save folder: ${saveDirectoryHandle.name}`
+    : "Save folder: browser download default";
+}
+
+async function saveWorkbookFile(workbook, filename, displayName) {
+  if (saveDirectoryHandle) {
+    const fileHandle = await saveDirectoryHandle.getFileHandle(filename, { create: true });
+    const writable = await fileHandle.createWritable();
+    const data = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    await writable.write(data);
+    await writable.close();
+    renderWorkbookPreview(workbook, displayName);
+    setStatus(`Saved ${filename} to selected folder.`);
+    return;
+  }
+  XLSX.writeFile(workbook, filename);
+  renderWorkbookPreview(workbook, displayName);
+  setStatus(`Downloaded ${filename}.`);
 }
 
 function updateVersionStamp() {

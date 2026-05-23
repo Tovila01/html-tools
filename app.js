@@ -143,10 +143,13 @@ const ui = {
   spillPrecautions: document.querySelector("#spillPrecautions"),
   spillCleanup: document.querySelector("#spillCleanup"),
   firstAidList: document.querySelector("#firstAidList"),
+  workbookPreview: document.querySelector("#workbookPreview"),
+  workbookPreviewMeta: document.querySelector("#workbookPreviewMeta"),
 };
 
 document.querySelector("#extractPdfButton").addEventListener("click", extractFromPdf);
 document.querySelector("#buildButton").addEventListener("click", renderAssessment);
+document.querySelector("#previewWorkbookButton").addEventListener("click", previewWorkbook);
 document.querySelector("#downloadButton").addEventListener("click", downloadWorkbook);
 aiSettingsForm.saveButton.addEventListener("click", saveAiSettings);
 aiSettingsForm.resetButton.addEventListener("click", resetAiSettings);
@@ -313,9 +316,28 @@ function downloadWorkbook() {
   const assessment = assessRow(row);
   const entries = buildHazardEntries(row, assessment);
   const firstAid = summarizeFirstAid(assessment.hazardTags);
+  const wb = buildWorkbook(row, assessment, entries, firstAid);
+  const baseName = slugify(row.name || "chemical");
+  XLSX.writeFile(wb, `${baseName}.xlsx`);
+  renderWorkbookPreview(wb, row.name || "chemical");
+  setStatus(`Downloaded ${baseName}.xlsx`);
+}
+
+function previewWorkbook() {
+  const row = getFormData();
+  const assessment = assessRow(row);
+  const entries = buildHazardEntries(row, assessment);
+  const firstAid = summarizeFirstAid(assessment.hazardTags);
+  const wb = buildWorkbook(row, assessment, entries, firstAid);
+  renderWorkbookPreview(wb, row.name || "chemical");
+  setStatus("Workbook preview updated.");
+}
+
+function buildWorkbook(row, assessment, entries, firstAid) {
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(Array.from({ length: 44 }, () => Array(6).fill("")));
   const setCell = (cell, value) => { ws[cell] = { t: "s", v: value ?? "" }; };
+  const ppe = normalizePpe(assessment.recommendedPpe);
 
   setCell("A1", "Chemical Risk Assessment Form");
   setCell("A3", "Chemical Name");
@@ -354,7 +376,6 @@ function downloadWorkbook() {
   setCell("C27", summarizeSpillPrecautions(assessment.hazardTags, assessment.engineeringControls));
   setCell("C28", summarizeSpillCleanup(assessment.hazardTags, assessment.wasteFlags));
 
-  const ppe = normalizePpe(assessment.recommendedPpe);
   setCell("A31", "Personal Protection Equipment");
   setCell("C31", ppe[0] || "");
   setCell("C32", ppe[1] || "");
@@ -375,9 +396,33 @@ function downloadWorkbook() {
 
   ws["!cols"] = [{ wch: 22 }, { wch: 24 }, { wch: 30 }, { wch: 46 }, { wch: 4 }, { wch: 14 }];
   XLSX.utils.book_append_sheet(wb, ws, "Risk Assessment");
-  const baseName = slugify(row.name || "chemical");
-  XLSX.writeFile(wb, `${baseName}.xlsx`);
-  setStatus(`Downloaded ${baseName}.xlsx`);
+  return wb;
+}
+
+function renderWorkbookPreview(workbook, displayName) {
+  const sheetName = workbook.SheetNames[0];
+  const ws = workbook.Sheets[sheetName];
+  const range = XLSX.utils.decode_range(ws["!ref"] || "A1:F44");
+  let html = "<table class=\"sheet-preview-table\"><tbody>";
+
+  for (let rowIndex = range.s.r; rowIndex <= range.e.r; rowIndex += 1) {
+    html += "<tr>";
+    for (let colIndex = range.s.c; colIndex <= range.e.c; colIndex += 1) {
+      const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: colIndex });
+      const cell = ws[cellAddress];
+      const value = cell?.v ?? "";
+      const classes = [];
+      if ([0, 7, 16, 30, 33, 39, 43].includes(rowIndex) && colIndex === 0) classes.push("sheet-section");
+      else if (colIndex === 0 || (rowIndex === 7 && [1, 2, 3, 5].includes(colIndex)) || ([2, 4].includes(colIndex) && [2, 4].includes(rowIndex))) classes.push("sheet-label");
+      html += `<td class="${classes.join(" ")}">${escapeHtml(String(value)).replace(/\n/g, "<br>")}</td>`;
+    }
+    html += "</tr>";
+  }
+
+  html += "</tbody></table>";
+  ui.workbookPreview.classList.remove("empty");
+  ui.workbookPreview.innerHTML = html;
+  ui.workbookPreviewMeta.textContent = `Previewing sheet "${sheetName}" for ${displayName || "chemical"}.`;
 }
 
 function normalizeCodes(raw) {

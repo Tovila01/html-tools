@@ -15,6 +15,7 @@ This repository is a standalone HTML/JavaScript version of the chemical risk ass
 - standardized hazard wording across chemicals
 - canonical chemical naming for form fields and downloaded files
 - Excel workbook export aligned more closely to the Python form layout
+- in-browser preview of the generated workbook layout
 
 ## How to use
 

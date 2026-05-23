@@ -212,6 +212,61 @@ select {
   overflow-x: auto;
 }
 
+.workbook-panel {
+  overflow: hidden;
+}
+
+.workbook-meta {
+  margin-bottom: 14px;
+  color: var(--muted);
+}
+
+.workbook-preview {
+  overflow: auto;
+  border: 1px solid rgba(138, 59, 18, 0.12);
+  border-radius: 16px;
+  background: #fff;
+  min-height: 220px;
+}
+
+.workbook-preview.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  color: var(--muted);
+  background: linear-gradient(180deg, #fffdf8 0%, #fbf5eb 100%);
+}
+
+.sheet-preview-table {
+  width: 100%;
+  min-width: 960px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.sheet-preview-table td {
+  border: 1px solid rgba(138, 59, 18, 0.12);
+  padding: 8px 10px;
+  min-width: 110px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: #fff;
+}
+
+.sheet-preview-table tr:first-child td,
+.sheet-preview-table .sheet-section {
+  background: #f6ebdf;
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
+.sheet-preview-table .sheet-label {
+  background: #fcf6ef;
+  color: var(--accent-strong);
+  font-weight: 600;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;

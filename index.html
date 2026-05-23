@@ -75,6 +75,7 @@
           </label>
           <button id="extractPdfButton" class="button button-primary" type="button">Extract from PDF</button>
           <button id="buildButton" class="button" type="button">Build Assessment</button>
+          <button id="previewWorkbookButton" class="button" type="button">Preview XLSX</button>
           <button id="downloadButton" class="button button-accent" type="button">Download XLSX</button>
         </div>
 
@@ -186,6 +187,18 @@
             <h3>First Aid</h3>
             <ul id="firstAidList"></ul>
           </article>
+        </div>
+      </section>
+
+      <section class="panel workbook-panel">
+        <div class="panel-header">
+          <h2>Workbook Preview</h2>
+          <p>Browser preview of the generated Excel form layout.</p>
+        </div>
+
+        <div id="workbookPreviewMeta" class="workbook-meta">No workbook generated yet.</div>
+        <div id="workbookPreview" class="workbook-preview empty">
+          Generate or preview the XLSX to inspect the form in the browser.
         </div>
       </section>
     </main>

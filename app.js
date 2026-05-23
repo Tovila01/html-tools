@@ -80,10 +80,30 @@ const DEFAULT_AI_SETTINGS = {
   baseUrl: "",
   systemPrompt: [
     "You extract structured chemical safety information from SDS or fact-sheet text.",
-    "Be reproducible, conservative, and compact.",
-    "Return only the baseline safety facts needed for a standardized assessment.",
-    "Use only the source document, do not invent hazard codes or chemical names.",
-    "For the name field, use only the base chemical name without concentration, grade, or technical qualifiers.",
+    "Your task is to extract structured information only from the provided source document text.",
+    "The source document is typically a safety data sheet (SDS), fact sheet, or official chemical safety document.",
+    "",
+    "Primary objective:",
+    "Maximize reproducibility, conservatism, and traceability.",
+    "Do not guess. Do not infer beyond what is explicitly supported by the text.",
+    "If information is missing, uncertain, contradictory, or not clearly stated, leave the field empty and report it in missing_fields or warnings.",
+    "",
+    "Rules:",
+    "1. Use only the provided document text as the source of truth.",
+    "2. Do not use outside knowledge.",
+    "3. Do not invent H-codes, CAS numbers, PPE, storage rules, disposal rules, or first-aid instructions.",
+    "4. Prefer exact extraction over paraphrase when possible.",
+    "5. If multiple values appear, prefer the most explicit and document-supported one, and mention ambiguity in warnings.",
+    "6. If a field is not explicitly supported, return an empty value for that field.",
+    "7. Keep all outputs deterministic, concise, and machine-readable.",
+    "8. Do not produce prose outside the requested JSON schema.",
+    "9. If the document is low quality, incomplete, OCR-corrupted, or inconsistent, lower confidence accordingly.",
+    "10. Only include hazard statements / H-codes that are explicitly present in the text.",
+    "11. Keep notes, storage, spill, first_aid, firefighting, disposal, and PPE concise and operational. Prefer compact summaries over long quoted passages.",
+    "12. For the name field, return only the base chemical name. Exclude concentration, purity, grade, technical descriptors, percentages, bracketed qualifiers, catalogue numbers, product codes, and formulation details.",
+    "Examples: return `Ethanol`, not `Ethanol 69%`; return `Acetone`, not `Acetone technical`; return `Hydrochloric acid`, not `Hydrochloric acid 37%`.",
+    "",
+    "Return valid JSON only.",
   ].join("\n"),
 };
 
@@ -293,40 +313,66 @@ function downloadWorkbook() {
   const assessment = assessRow(row);
   const entries = buildHazardEntries(row, assessment);
   const firstAid = summarizeFirstAid(assessment.hazardTags);
-  const data = [
-    ["Chemical Risk Assessment Form"],
-    [],
-    ["Chemical Name", "", row.name, "", "Assessor", row.assessor],
-    [],
-    ["Location/Room No.", "", row.location, "", "Date", row.date],
-    ["No. of people working in this location", "", row.peopleCount],
-    [],
-    ["Area", "Hazard", "Risks", "Protection and Prevention Measures", "", "Risk Rating"],
-    ...entries.map((entry) => [entry.area, entry.hazard, entry.risk, entry.controls, "", entry.rating]),
-    [],
-    ["Emergency Procedures"],
-    ["In case of fire:"],
-    ["Extinguishing media:", "", summarizeFirefighting(assessment.hazardTags)],
-    [],
-    ["In case of accidental release:"],
-    ["Precautions", "", summarizeSpillPrecautions(assessment.hazardTags, assessment.engineeringControls)],
-    ["Cleanup", "", summarizeSpillCleanup(assessment.hazardTags, assessment.wasteFlags)],
-    [],
-    ["Personal Protection Equipment"],
-    ["", "", normalizePpe(assessment.recommendedPpe).join(". ")],
-    [],
-    ["First Aid"],
-    ["", "", firstAid.ingestion],
-    ["", "", firstAid.inhalation],
-    ["", "", firstAid.eyes],
-    ["", "", firstAid.skin],
-    [],
-    ["Other Information"],
-    ["", "", [`CAS: ${row.cas || "-"}`, `GHS: ${assessment.codes.join(", ") || "-"}`, `Signal word: ${row.signalWord || "-"}`].join("\n")],
-  ];
-
   const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(data);
+  const ws = XLSX.utils.aoa_to_sheet(Array.from({ length: 44 }, () => Array(6).fill("")));
+  const setCell = (cell, value) => { ws[cell] = { t: "s", v: value ?? "" }; };
+
+  setCell("A1", "Chemical Risk Assessment Form");
+  setCell("A3", "Chemical Name");
+  setCell("C3", row.name);
+  setCell("E3", "Assessor");
+  setCell("F3", row.assessor);
+  setCell("A5", "Location/Room No.");
+  setCell("C5", row.location);
+  setCell("E5", "Date");
+  setCell("F5", row.date);
+  setCell("A6", "No. of people working in this location");
+  setCell("C6", row.peopleCount);
+
+  setCell("A8", "Area");
+  setCell("B8", "Hazard");
+  setCell("C8", "Risks");
+  setCell("D8", "Protection and Prevention Measures");
+  setCell("F8", "Risk Rating");
+
+  const hazardRows = [9, 10, 11, 12, 13, 14];
+  entries.forEach((entry, index) => {
+    const rowNo = hazardRows[index];
+    if (!rowNo) return;
+    setCell(`A${rowNo}`, entry.area);
+    setCell(`B${rowNo}`, entry.hazard);
+    setCell(`C${rowNo}`, entry.risk);
+    setCell(`D${rowNo}`, entry.controls);
+    setCell(`F${rowNo}`, entry.rating);
+  });
+
+  setCell("A17", "Emergency Procedures");
+  setCell("A18", "In case of fire:");
+  setCell("A19", "Extinguishing media:");
+  setCell("C19", summarizeFirefighting(assessment.hazardTags));
+  setCell("A26", "In case of accidental release:");
+  setCell("C27", summarizeSpillPrecautions(assessment.hazardTags, assessment.engineeringControls));
+  setCell("C28", summarizeSpillCleanup(assessment.hazardTags, assessment.wasteFlags));
+
+  const ppe = normalizePpe(assessment.recommendedPpe);
+  setCell("A31", "Personal Protection Equipment");
+  setCell("C31", ppe[0] || "");
+  setCell("C32", ppe[1] || "");
+  setCell("C33", ppe[2] || "");
+
+  setCell("A34", "First Aid");
+  setCell("C34", firstAid.ingestion);
+  setCell("C35", firstAid.inhalation);
+  setCell("C36", firstAid.eyes);
+  setCell("C37", firstAid.skin);
+
+  setCell("A40", "Other Information");
+  setCell("C40", [`CAS: ${row.cas || "-"}`, `GHS: ${assessment.codes.join(", ") || "-"}`, `Signal word: ${row.signalWord || "-"}`].join("\n"));
+  setCell("A44", "Assessor's signature");
+  setCell("C44", row.assessor);
+  setCell("E44", "Supervisor's signature (if assessor is a student)");
+  setCell("F44", row.supervisor);
+
   ws["!cols"] = [{ wch: 22 }, { wch: 24 }, { wch: 30 }, { wch: 46 }, { wch: 4 }, { wch: 14 }];
   XLSX.utils.book_append_sheet(wb, ws, "Risk Assessment");
   const baseName = slugify(row.name || "chemical");

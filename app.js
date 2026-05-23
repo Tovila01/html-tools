@@ -118,7 +118,6 @@ const form = {
   name: document.querySelector("#name"),
   cas: document.querySelector("#cas"),
   ghsCodes: document.querySelector("#ghsCodes"),
-  signalWord: document.querySelector("#signalWord"),
   physicalForm: document.querySelector("#physicalForm"),
   concentration: document.querySelector("#concentration"),
   assessor: document.querySelector("#assessor"),
@@ -236,7 +235,6 @@ async function extractWithAiFromPdfText(sourceText, fallbackExtraction) {
     '  "name": string,',
     '  "cas": string,',
     '  "ghsCodes": string,',
-    '  "signalWord": string,',
     '  "physicalForm": string,',
     '  "concentration": string,',
     '  "notes": string,',
@@ -396,7 +394,6 @@ function sanitizeAiReview(reviewed, fallback) {
     name: canonicalizeChemicalName(safe.name || fallback.name || ""),
     cas: normalizeFlatString(safe.cas ?? fallback.cas),
     ghsCodes: normalizeAiCodes(safe.ghsCodes ?? fallback.ghsCodes),
-    signalWord: normalizeFlatString(safe.signalWord ?? fallback.signalWord),
     physicalForm: normalizeFlatString(safe.physicalForm ?? fallback.physicalForm),
     concentration: normalizeFlatString(safe.concentration ?? fallback.concentration),
     notes: normalizeFlatString(safe.notes ?? fallback.notes),
@@ -434,7 +431,6 @@ function buildAiReviewStatus(reviewed) {
 function parseSdsText(text) {
   const productDescription = text.match(/Product Description\s*:?\s*([^\n]+?)(?=\s{2,}|Synonyms|Cat No|CAS No|Index No)/i)?.[1];
   const synonym = text.match(/Synonyms\s+([^\n]+?)(?=\s{2,}|Index No|CAS No|EC No)/i)?.[1];
-  const signalWord = text.match(/Signal Word\s+([A-Za-z]+)/i)?.[1] || "";
   const cas = text.match(/CAS No\.?\s*([0-9-]+)/i)?.[1] || "";
   const weight = text.match(/Weight\s*%\s*([^\n]+?)(?=\s{2,}|Flam\.|Eye Irrit|STOT|$)/i)?.[1] || "";
   const hCodes = Array.from(new Set((text.match(/\b(?:EUH\d+|H\d{3})\b/g) || []).map((code) => code.toUpperCase())));
@@ -444,7 +440,6 @@ function parseSdsText(text) {
     name: canonicalizeChemicalName(productDescription || synonym || ""),
     cas,
     ghsCodes: hCodes.join(";"),
-    signalWord,
     concentration: weight.replace(/\s+/g, " ").trim(),
     physicalForm,
     notes,
@@ -454,7 +449,6 @@ function parseSdsText(text) {
 function applyExtracted(extracted) {
   for (const [key, value] of Object.entries(extracted)) {
     if (key === "ghsCodes") form.ghsCodes.value = value || form.ghsCodes.value;
-    else if (key === "signalWord") form.signalWord.value = value || form.signalWord.value;
     else if (key === "physicalForm") form.physicalForm.value = value || form.physicalForm.value;
     else if (key === "concentration") form.concentration.value = value || form.concentration.value;
     else if (key === "notes") form.notes.value = value || form.notes.value;
@@ -502,13 +496,12 @@ function getFormData() {
     name: canonicalizeChemicalName(form.name.value),
     cas: form.cas.value.trim(),
     ghsCodes: form.ghsCodes.value.trim(),
-    signalWord: form.signalWord.value.trim(),
     physicalForm: form.physicalForm.value.trim(),
     concentration: form.concentration.value.trim(),
     assessor: form.assessor.value.trim(),
     location: form.location.value.trim(),
     date: form.date.value.trim(),
-    peopleCount: form.peopleCount.value.trim() || "1",
+    peopleCount: form.peopleCount.value.trim(),
     supervisor: form.supervisor.value.trim(),
     notes: form.notes.value.trim(),
     manualRiskEnabled: form.manualRiskEnabled.checked,
@@ -650,7 +643,7 @@ function buildWorkbook(row, assessment, entries, firstAid) {
   setCell("C37", firstAid.skin);
 
   setCell("A40", "Other Information");
-  setCell("C40", [`CAS: ${row.cas || "-"}`, `GHS: ${assessment.codes.join(", ") || "-"}`, `Signal word: ${row.signalWord || "-"}`].join("\n"));
+  setCell("C40", [`CAS: ${row.cas || "-"}`, `GHS: ${assessment.codes.join(", ") || "-"}`].join("\n"));
   setCell("A44", "Assessor's signature");
   setCell("C44", row.assessor);
   setCell("E44", "Supervisor's signature (if assessor is a student)");

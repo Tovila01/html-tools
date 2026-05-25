@@ -878,19 +878,30 @@ function buildHazardEntries(row, assessment) {
   const band = titleCase(assessment.riskBand);
   const tags = orderedUseTags(assessment.hazardTags);
   const entries = [];
+  const primaryTag = tags[0] || "";
+  const primaryTemplate = HAZARD_LIBRARY[primaryTag] || null;
+  const defaultUseRisk = primaryRiskText(tags) || "Exposure during handling";
 
   entries.push({
     area: "Storage",
-    hazard: tags[0] ? HAZARD_LIBRARY[tags[0]]?.hazard || "Chemical hazard" : "Chemical hazard",
-    risk: primaryRiskText(tags) || "Exposure",
+    hazard: primaryTemplate?.hazard || "Chemical hazard",
+    risk: primaryRiskText(tags) || "Storage incompatibility or exposure",
     controls: summarizeStorage(tags, assessment.storageFlags),
     rating: band,
   });
 
-  for (const [index, tag] of tags.entries()) {
-    const template = HAZARD_LIBRARY[tag] || { hazard: "Handling exposure", risk: primaryRiskText(tags) || "Exposure", controls: ["Review SDS before use."] };
+  entries.push({
+    area: "Use",
+    hazard: primaryTemplate?.hazard || "Handling exposure",
+    risk: primaryTemplate?.risk || defaultUseRisk,
+    controls: primaryTemplate?.controls?.join("\n") || "Review SDS before use.",
+    rating: band,
+  });
+
+  for (const tag of tags.slice(1)) {
+    const template = HAZARD_LIBRARY[tag] || { hazard: "Handling exposure", risk: defaultUseRisk, controls: ["Review SDS before use."] };
     entries.push({
-      area: index === 0 ? "Use" : "",
+      area: "",
       hazard: template.hazard,
       risk: template.risk,
       controls: template.controls.join("\n"),
@@ -900,7 +911,7 @@ function buildHazardEntries(row, assessment) {
 
   entries.push({
     area: "Waste",
-    hazard: tags[0] ? HAZARD_LIBRARY[tags[0]]?.hazard || "Hazardous waste" : "Hazardous waste",
+    hazard: primaryTemplate?.hazard || "Hazardous waste",
     risk: primaryRiskText(tags) || "Exposure or environmental release",
     controls: summarizeDisposal(tags, assessment.wasteFlags),
     rating: band,

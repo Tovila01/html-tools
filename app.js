@@ -15,6 +15,7 @@ const HAZARD_RULES = {
   H350: { severity: 5, tags: ["carcinogen"], ppe: ["chemical_goggles", "lab_coat", "chemical_resistant_gloves"], controls: ["use_fume_hood", "minimize_exposure", "restricted_handling"], storage: ["health_hazard_storage"], waste: ["hazardous_organic_waste"] },
   H351: { severity: 4, tags: ["suspected_carcinogen"], ppe: ["safety_glasses", "lab_coat", "chemical_resistant_gloves"], controls: ["use_fume_hood", "minimize_exposure", "avoid_repeated_exposure"], storage: ["health_hazard_storage"], waste: ["hazardous_organic_waste"] },
   H360: { severity: 5, tags: ["reproductive_toxicity"], ppe: ["safety_glasses", "lab_coat", "chemical_resistant_gloves"], controls: ["use_fume_hood", "minimize_exposure", "avoid_skin_contact", "restricted_handling"], storage: ["health_hazard_storage"], waste: ["hazardous_organic_waste"] },
+  H360FD: { severity: 5, tags: ["reproductive_toxicity"], ppe: ["chemical_goggles", "lab_coat", "chemical_resistant_gloves"], controls: ["use_fume_hood", "minimize_exposure", "avoid_skin_contact", "restricted_handling"], storage: ["health_hazard_storage"], waste: ["hazardous_organic_waste"] },
   H361FD: { severity: 4, tags: ["reproductive_toxicity"], ppe: ["chemical_goggles", "lab_coat", "chemical_resistant_gloves"], controls: ["use_fume_hood", "minimize_exposure", "avoid_skin_contact"], storage: ["health_hazard_storage"], waste: ["hazardous_organic_waste"] },
   H372: { severity: 5, tags: ["organ_toxicity_repeated"], ppe: ["chemical_goggles", "lab_coat", "chemical_resistant_gloves"], controls: ["use_fume_hood", "avoid_repeated_exposure", "restricted_handling"], storage: ["health_hazard_storage"], waste: ["hazardous_organic_waste"] },
   H410: { severity: 4, tags: ["aquatic_toxicity"], ppe: ["safety_glasses", "lab_coat", "nitrile_gloves"], controls: ["prevent_release_to_drain"], storage: [], waste: ["hazardous_aqueous_waste"] },
@@ -77,9 +78,16 @@ const HAZARD_STATEMENTS = {
   H350: "May cause cancer.",
   H351: "Suspected of causing cancer.",
   H360: "May damage fertility or the unborn child.",
+  H360FD: "May damage fertility. May damage the unborn child.",
   H361FD: "Suspected of damaging fertility. Suspected of damaging the unborn child.",
   H372: "Causes damage to organs through prolonged or repeated exposure.",
   H410: "Very toxic to aquatic life with long lasting effects.",
+};
+
+const HAZARD_STATEMENT_VARIANTS = {
+  H360: ["May damage fertility or the unborn child."],
+  H360FD: ["May damage fertility. May damage the unborn child."],
+  H361FD: ["Suspected of damaging fertility. Suspected of damaging the unborn child."],
 };
 
 const TAG_RISK_CODE_PRIORITY = {
@@ -97,7 +105,7 @@ const TAG_RISK_CODE_PRIORITY = {
   mutagenicity: ["H340"],
   carcinogen: ["H350"],
   suspected_carcinogen: ["H351"],
-  reproductive_toxicity: ["H360", "H361FD"],
+  reproductive_toxicity: ["H360FD", "H360", "H361FD"],
   organ_toxicity_repeated: ["H372"],
   aquatic_toxicity: ["H410"],
 };
@@ -1352,11 +1360,35 @@ function normalizeCodes(raw) {
 }
 
 function extractHazardCodes(value) {
-  return unique(
-    (String(value ?? "").toUpperCase().match(/\b(?:EUH\d+|H\d{3}[A-Z]{0,3})\b/g) || [])
-      .map((item) => item.trim())
-      .filter(Boolean)
-  );
+  const text = String(value ?? "");
+  const explicitCodes = (text.toUpperCase().match(/\b(?:EUH\d+|H\d{3}[A-Z]{0,3})\b/g) || [])
+    .map((item) => item.trim())
+    .filter(Boolean);
+  return unique([...explicitCodes, ...inferHazardCodesFromStatements(text)]);
+}
+
+function normalizeHazardStatementText(value) {
+  return String(value ?? "")
+    .toLowerCase()
+    .replace(/[\u2010-\u2015]/g, "-")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function inferHazardCodesFromStatements(value) {
+  const normalizedSource = normalizeHazardStatementText(value);
+  if (!normalizedSource) return [];
+  const inferred = [];
+  for (const [code, statement] of Object.entries(HAZARD_STATEMENTS)) {
+    const variants = unique([statement, ...(HAZARD_STATEMENT_VARIANTS[code] || [])])
+      .map((item) => normalizeHazardStatementText(item))
+      .filter(Boolean);
+    if (variants.some((variant) => normalizedSource.includes(variant))) {
+      inferred.push(code);
+    }
+  }
+  return inferred;
 }
 
 function canonicalizeChemicalName(value) {
@@ -1392,7 +1424,9 @@ function summarizeHazardsFromCodes(codes) {
   if (codes.includes("H336")) parts.push("May cause drowsiness or dizziness.");
   if (codes.includes("H340")) parts.push("May cause genetic defects.");
   if (codes.includes("H350")) parts.push("May cause cancer.");
-  if (codes.includes("H361FD")) parts.push("Suspected of damaging fertility or the unborn child.");
+  if (codes.includes("H360")) parts.push("May damage fertility or the unborn child.");
+  if (codes.includes("H360FD")) parts.push("May damage fertility. May damage the unborn child.");
+  if (codes.includes("H361FD")) parts.push("Suspected of damaging fertility. Suspected of damaging the unborn child.");
   if (codes.includes("H372")) parts.push("Causes organ damage through prolonged or repeated exposure.");
   return parts.join(" ");
 }

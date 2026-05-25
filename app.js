@@ -3,12 +3,20 @@ const HAZARD_RULES = {
   H290: { severity: 3, tags: ["corrosive_to_metals"], ppe: ["safety_glasses", "lab_coat", "nitrile_gloves"], controls: ["segregate_from_metals"], storage: ["corrosives_storage"], waste: ["corrosive_waste"] },
   H300: { severity: 5, tags: ["acute_toxicity_oral"], ppe: ["safety_glasses", "lab_coat", "nitrile_gloves"], controls: ["avoid_all_ingestion", "restricted_handling"], storage: ["toxics_storage"], waste: ["hazardous_toxic_waste"] },
   H301: { severity: 4, tags: ["toxic_if_swallowed"], ppe: ["safety_glasses", "lab_coat", "nitrile_gloves"], controls: ["avoid_all_ingestion"], storage: ["toxics_storage"], waste: ["hazardous_toxic_waste"] },
+  H302: { severity: 3, tags: ["harmful_if_swallowed"], ppe: ["safety_glasses", "lab_coat", "nitrile_gloves"], controls: ["avoid_all_ingestion"], storage: ["toxics_storage"], waste: ["hazardous_toxic_waste"] },
   H314: { severity: 5, tags: ["corrosive", "skin_burns", "eye_damage"], ppe: ["chemical_goggles", "lab_coat", "chemical_resistant_gloves"], controls: ["use_fume_hood_if_volatile", "have_spill_kit_ready"], storage: ["corrosives_storage"], waste: ["corrosive_waste"] },
+  H315: { severity: 2, tags: ["skin_irritant"], ppe: ["safety_glasses", "lab_coat", "nitrile_gloves"], controls: ["avoid_skin_contact"], storage: [], waste: [] },
+  H317: { severity: 3, tags: ["skin_sensitizer"], ppe: ["safety_glasses", "lab_coat", "nitrile_gloves"], controls: ["avoid_skin_contact", "avoid_repeated_exposure"], storage: ["health_hazard_storage"], waste: ["hazardous_organic_waste"] },
   H319: { severity: 2, tags: ["eye_irritant"], ppe: ["safety_glasses", "lab_coat", "nitrile_gloves"], controls: [], storage: [], waste: [] },
+  H332: { severity: 3, tags: ["harmful_if_inhaled"], ppe: ["safety_glasses", "lab_coat", "nitrile_gloves"], controls: ["use_fume_hood", "avoid_breathing_vapours_or_dust"], storage: ["health_hazard_storage"], waste: ["hazardous_organic_waste"] },
   H335: { severity: 3, tags: ["respiratory_irritant"], ppe: ["safety_glasses", "lab_coat", "nitrile_gloves"], controls: ["use_fume_hood"], storage: [], waste: [] },
   H336: { severity: 2, tags: ["narcotic_effects"], ppe: ["safety_glasses", "lab_coat", "nitrile_gloves"], controls: ["use_in_ventilated_area"], storage: [], waste: [] },
+  H340: { severity: 5, tags: ["mutagenicity"], ppe: ["chemical_goggles", "lab_coat", "chemical_resistant_gloves"], controls: ["use_fume_hood", "minimize_exposure", "restricted_handling"], storage: ["health_hazard_storage"], waste: ["hazardous_organic_waste"] },
+  H350: { severity: 5, tags: ["carcinogen"], ppe: ["chemical_goggles", "lab_coat", "chemical_resistant_gloves"], controls: ["use_fume_hood", "minimize_exposure", "restricted_handling"], storage: ["health_hazard_storage"], waste: ["hazardous_organic_waste"] },
   H351: { severity: 4, tags: ["suspected_carcinogen"], ppe: ["safety_glasses", "lab_coat", "chemical_resistant_gloves"], controls: ["use_fume_hood", "minimize_exposure", "avoid_repeated_exposure"], storage: ["health_hazard_storage"], waste: ["hazardous_organic_waste"] },
   H360: { severity: 5, tags: ["reproductive_toxicity"], ppe: ["safety_glasses", "lab_coat", "chemical_resistant_gloves"], controls: ["use_fume_hood", "minimize_exposure", "avoid_skin_contact", "restricted_handling"], storage: ["health_hazard_storage"], waste: ["hazardous_organic_waste"] },
+  H361FD: { severity: 4, tags: ["reproductive_toxicity"], ppe: ["chemical_goggles", "lab_coat", "chemical_resistant_gloves"], controls: ["use_fume_hood", "minimize_exposure", "avoid_skin_contact"], storage: ["health_hazard_storage"], waste: ["hazardous_organic_waste"] },
+  H372: { severity: 5, tags: ["organ_toxicity_repeated"], ppe: ["chemical_goggles", "lab_coat", "chemical_resistant_gloves"], controls: ["use_fume_hood", "avoid_repeated_exposure", "restricted_handling"], storage: ["health_hazard_storage"], waste: ["hazardous_organic_waste"] },
   H410: { severity: 4, tags: ["aquatic_toxicity"], ppe: ["safety_glasses", "lab_coat", "nitrile_gloves"], controls: ["prevent_release_to_drain"], storage: [], waste: ["hazardous_aqueous_waste"] },
 };
 
@@ -16,12 +24,19 @@ const USE_HAZARD_PRIORITY = [
   "flammable",
   "acute_toxicity_oral",
   "toxic_if_swallowed",
+  "harmful_if_swallowed",
+  "harmful_if_inhaled",
+  "mutagenicity",
+  "carcinogen",
+  "organ_toxicity_repeated",
+  "reproductive_toxicity",
   "corrosive",
+  "skin_irritant",
+  "skin_sensitizer",
   "eye_irritant",
   "respiratory_irritant",
   "narcotic_effects",
   "suspected_carcinogen",
-  "reproductive_toxicity",
   "aquatic_toxicity",
 ];
 
@@ -29,12 +44,19 @@ const HAZARD_LIBRARY = {
   flammable: { hazard: "Highly flammable", risk: "Fire", controls: ["Keep away from sources of ignition.", "Use only in a well ventilated area."] },
   acute_toxicity_oral: { hazard: "Acute toxicity", risk: "Poisoning if swallowed", controls: ["Avoid ingestion.", "Do not work alone if high-toxicity handling is required."] },
   toxic_if_swallowed: { hazard: "Toxic if swallowed", risk: "Poisoning if swallowed", controls: ["Avoid ingestion.", "Wash hands after handling."] },
+  harmful_if_swallowed: { hazard: "Harmful if swallowed", risk: "Poisoning if swallowed", controls: ["Avoid ingestion.", "Wash hands after handling."] },
+  harmful_if_inhaled: { hazard: "Harmful if inhaled", risk: "Inhalation exposure", controls: ["Avoid breathing vapours or aerosols.", "Use in a fume hood or well ventilated area."] },
   corrosive: { hazard: "Corrosive", risk: "Skin burns or serious eye damage", controls: ["Wear splash protection and suitable gloves.", "Handle carefully and avoid direct contact."] },
+  skin_irritant: { hazard: "Skin irritant", risk: "Skin irritation", controls: ["Avoid skin contact.", "Wear protective gloves and wash after handling."] },
+  skin_sensitizer: { hazard: "Skin sensitizer", risk: "Allergic skin reaction", controls: ["Avoid skin contact.", "Prevent repeated exposure."] },
   eye_irritant: { hazard: "Eye irritant", risk: "Eye irritation", controls: ["Wear safety glasses or goggles."] },
   respiratory_irritant: { hazard: "Respiratory irritant", risk: "Respiratory irritation", controls: ["Avoid breathing vapours or dust.", "Use in a fume hood or well ventilated area."] },
   narcotic_effects: { hazard: "Vapour exposure", risk: "Drowsiness or dizziness", controls: ["Avoid breathing vapours.", "Use in a well ventilated area."] },
+  mutagenicity: { hazard: "Mutagenicity hazard", risk: "Genetic damage", controls: ["Minimize exposure.", "Use in a fume hood and restrict handling."] },
+  carcinogen: { hazard: "Carcinogen", risk: "Long-term cancer risk", controls: ["Minimize exposure.", "Use in a fume hood and restrict handling."] },
   suspected_carcinogen: { hazard: "Suspected carcinogen", risk: "Long-term health effects", controls: ["Minimize exposure.", "Use in a fume hood."] },
   reproductive_toxicity: { hazard: "Reproductive toxin", risk: "Reproductive health effects", controls: ["Minimize exposure.", "Avoid skin contact and inhalation."] },
+  organ_toxicity_repeated: { hazard: "Repeated exposure toxicity", risk: "Organ damage through repeated exposure", controls: ["Avoid repeated exposure.", "Use engineering controls and restrict handling."] },
   aquatic_toxicity: { hazard: "Environmental hazard", risk: "Environmental release", controls: ["Prevent release to drains."] },
 };
 
@@ -47,12 +69,19 @@ const STANDARD_TEXT = {
     flammable: "Store in flammables area or solvent cabinet.",
     corrosive: "Store in corrosives storage.",
     suspected_carcinogen: "Store in designated health hazard storage.",
+    carcinogen: "Store in designated health hazard storage.",
+    mutagenicity: "Store in designated health hazard storage.",
     reproductive_toxicity: "Store in designated health hazard storage.",
+    organ_toxicity_repeated: "Store in designated health hazard storage.",
     default: "Store in a compatible, clearly labelled container.",
   },
   disposal: {
     flammable: "Collect in non-halogenated or flammable solvent waste.",
     corrosive: "Collect in corrosive hazardous waste.",
+    carcinogen: "Collect as hazardous chemical waste with carcinogenic or chronic-toxicity precautions.",
+    mutagenicity: "Collect as hazardous chemical waste with chronic-toxicity precautions.",
+    reproductive_toxicity: "Collect as hazardous chemical waste with reproductive-toxicity precautions.",
+    organ_toxicity_repeated: "Collect as hazardous chemical waste with chronic-toxicity precautions.",
     aquatic_toxicity: "Collect as hazardous waste and prevent release to drains.",
     default: "Dispose of as hazardous waste according to local rules.",
   },
@@ -466,12 +495,7 @@ function normalizeNameDetails(value, baseName = "") {
 }
 
 function normalizeAiCodes(value) {
-  return unique(
-    String(value ?? "")
-      .split(/[;,\s]+/)
-      .map((item) => item.trim().toUpperCase())
-      .filter((item) => /^(?:EUH\d+|H\d{3})$/.test(item))
-  ).join(";");
+  return extractHazardCodes(value).join(";");
 }
 
 function buildAiReviewStatus(reviewed) {
@@ -715,7 +739,7 @@ function parseSdsText(text) {
   const nameMeta = splitChemicalNameDetails(rawName);
   const cas = text.match(/CAS No\.?\s*([0-9-]+)/i)?.[1] || "";
   const weight = text.match(/Weight\s*%\s*([^\n]+?)(?=\s{2,}|Flam\.|Eye Irrit|STOT|$)/i)?.[1] || "";
-  const hCodes = Array.from(new Set((text.match(/\b(?:EUH\d+|H\d{3})\b/g) || []).map((code) => code.toUpperCase())));
+  const hCodes = extractHazardCodes(text);
   const physicalForm = /physical state\s+liquid/i.test(text) ? "Liquid" : (/physical state\s+solid/i.test(text) ? "Solid" : "");
   const notes = summarizeHazardsFromCodes(hCodes);
   return {
@@ -1077,7 +1101,15 @@ function renderWorkbookPreview(workbook, displayName) {
 }
 
 function normalizeCodes(raw) {
-  return raw.split(/[;,]/).map((item) => item.trim().toUpperCase()).filter(Boolean);
+  return extractHazardCodes(raw);
+}
+
+function extractHazardCodes(value) {
+  return unique(
+    (String(value ?? "").toUpperCase().match(/\b(?:EUH\d+|H\d{3}[A-Z]{0,3})\b/g) || [])
+      .map((item) => item.trim())
+      .filter(Boolean)
+  );
 }
 
 function canonicalizeChemicalName(value) {
@@ -1104,9 +1136,17 @@ function splitChemicalNameDetails(value) {
 
 function summarizeHazardsFromCodes(codes) {
   const parts = [];
+  if (codes.includes("H302")) parts.push("Harmful if swallowed.");
+  if (codes.includes("H315")) parts.push("Causes skin irritation.");
+  if (codes.includes("H317")) parts.push("May cause an allergic skin reaction.");
   if (codes.includes("H225")) parts.push("Highly flammable liquid and vapour.");
   if (codes.includes("H319")) parts.push("Causes serious eye irritation.");
+  if (codes.includes("H332")) parts.push("Harmful if inhaled.");
   if (codes.includes("H336")) parts.push("May cause drowsiness or dizziness.");
+  if (codes.includes("H340")) parts.push("May cause genetic defects.");
+  if (codes.includes("H350")) parts.push("May cause cancer.");
+  if (codes.includes("H361FD")) parts.push("Suspected of damaging fertility or the unborn child.");
+  if (codes.includes("H372")) parts.push("Causes organ damage through prolonged or repeated exposure.");
   return parts.join(" ");
 }
 

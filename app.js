@@ -74,6 +74,7 @@ const STANDARD_TEXT = {
 
 const AI_SETTINGS_STORAGE_KEY = "safety-assessment-generator-ai-settings";
 const FIELD_HISTORY_STORAGE_KEY = "safety-assessment-generator-field-history";
+const EXTRACTION_MODE_STORAGE_KEY = "safety-assessment-generator-extraction-mode";
 const WORKBOOK_TEMPLATE_PATH = "./ChemicalRiskAssessment_blank.xlsx";
 const AI_SETTINGS_VERSION = 3;
 const DEFAULT_AI_SETTINGS = {
@@ -129,6 +130,7 @@ const ASSESSMENT_REVIEW_SYSTEM_PROMPT = [
 
 const form = {
   pdfFile: document.querySelector("#pdfFile"),
+  pdfExtractionMode: document.querySelector("#pdfExtractionMode"),
   name: document.querySelector("#name"),
   cas: document.querySelector("#cas"),
   ghsCodes: document.querySelector("#ghsCodes"),
@@ -196,6 +198,7 @@ form.assessor.addEventListener("change", persistHistoryField);
 form.assessor.addEventListener("blur", persistHistoryField);
 form.location.addEventListener("change", persistHistoryField);
 form.location.addEventListener("blur", persistHistoryField);
+form.pdfExtractionMode.addEventListener("change", persistExtractionMode);
 form.manualRiskEnabled.addEventListener("change", renderAssessment);
 form.manualSeverity.addEventListener("change", renderAssessment);
 form.manualProbability.addEventListener("change", renderAssessment);
@@ -229,12 +232,19 @@ async function extractFromPdf() {
     text += content.items.map((item) => item.str).join(" ") + "\n";
   }
   const fallbackExtraction = parseSdsText(text);
-  setStatus("Running AI extraction...");
-  const reviewed = await extractWithAiFromPdfText(text, fallbackExtraction);
-  const finalExtraction = reviewed.extraction || fallbackExtraction;
-  const statusSuffix = reviewed.usedAi
-    ? buildAiReviewStatus(reviewed)
-    : reviewed.reason || "AI extraction unavailable, using local fallback.";
+  const extractionMode = getSelectedExtractionMode();
+  let finalExtraction = fallbackExtraction;
+  let statusSuffix = "OCR/local extraction complete.";
+
+  if (extractionMode === "ai") {
+    setStatus("Running AI extraction...");
+    const reviewed = await extractWithAiFromPdfText(text, fallbackExtraction);
+    finalExtraction = reviewed.extraction || fallbackExtraction;
+    statusSuffix = reviewed.usedAi
+      ? buildAiReviewStatus(reviewed)
+      : reviewed.reason || "AI extraction unavailable, using local fallback.";
+  }
+
   applyExtracted(finalExtraction);
   buildAssessment();
   setStatus(`PDF extraction complete. ${statusSuffix}`);
@@ -1102,6 +1112,7 @@ async function initializeApp() {
   populateFieldHistoryOptions();
   updateSaveFolderStatus();
   loadAiSettings();
+  loadExtractionMode();
   try {
     await ensureWorkbookTemplateLoaded();
   } catch (_error) {
@@ -1152,6 +1163,31 @@ function saveFieldHistory() {
 
 function persistHistoryField() {
   saveFieldHistory();
+}
+
+function loadExtractionMode() {
+  try {
+    const savedMode = localStorage.getItem(EXTRACTION_MODE_STORAGE_KEY);
+    if (savedMode === "ocr" || savedMode === "ai") {
+      form.pdfExtractionMode.value = savedMode;
+      return;
+    }
+  } catch (_error) {
+    // Ignore localStorage failures and keep the default mode.
+  }
+  form.pdfExtractionMode.value = "ocr";
+}
+
+function persistExtractionMode() {
+  try {
+    localStorage.setItem(EXTRACTION_MODE_STORAGE_KEY, getSelectedExtractionMode());
+  } catch (_error) {
+    // Ignore localStorage failures.
+  }
+}
+
+function getSelectedExtractionMode() {
+  return form.pdfExtractionMode.value === "ai" ? "ai" : "ocr";
 }
 
 function mergeHistory(existing, value) {

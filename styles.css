@@ -120,6 +120,17 @@ h1 {
   color: var(--muted);
 }
 
+.inline-select {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 220px;
+}
+
+.extraction-mode-control {
+  color: var(--muted);
+}
+
 .button,
 input,
 select,

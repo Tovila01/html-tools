@@ -99,6 +99,13 @@ Return valid JSON only.</textarea>
             <span>SDS PDF</span>
             <input id="pdfFile" type="file" accept="application/pdf" />
           </label>
+          <label class="inline-select extraction-mode-control">
+            <span>PDF extraction mode</span>
+            <select id="pdfExtractionMode">
+              <option value="ocr" selected>OCR / local parser</option>
+              <option value="ai">AI full fill</option>
+            </select>
+          </label>
           <button id="chooseFolderButton" class="button" type="button">Choose Save Folder</button>
           <button id="extractPdfButton" class="button button-primary" type="button">Extract from PDF</button>
           <button id="buildButton" class="button" type="button">Build Assessment</button>

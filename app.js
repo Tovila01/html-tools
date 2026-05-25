@@ -407,6 +407,7 @@ async function extractWithAiFromPdfText(sourceText, fallbackExtraction) {
     "Read the provided PDF text directly and fill the form fields from the document itself.",
     "This is primary extraction, not proofreading of an existing result.",
     "Use only the source text. Do not use outside knowledge.",
+    "If explicit written hazard statements clearly correspond to standard H-statements, return the matching H-codes in `ghsCodes` even when the SDS prints only the sentence and not the code.",
     "Preserve empty fields if the source does not support a value.",
     "Return strict JSON with this schema only:",
     "{",
@@ -571,11 +572,12 @@ function sanitizeAiReview(reviewed, fallback) {
   const safe = reviewed && typeof reviewed === "object" ? reviewed : {};
   const fallbackNameMeta = splitChemicalNameDetails(fallback.name || "");
   const normalizedName = canonicalizeChemicalName(safe.name || fallbackNameMeta.baseName || fallback.name || "");
+  const resolvedGhsCodes = resolveAiGhsCodes(safe, fallback);
   const extraction = {
     name: normalizedName,
     nameDetails: normalizeNameDetails(safe.nameDetails ?? fallback.nameDetails ?? fallbackNameMeta.details, normalizedName),
     cas: normalizeFlatString(safe.cas ?? fallback.cas),
-    ghsCodes: normalizeAiCodes(safe.ghsCodes ?? fallback.ghsCodes),
+    ghsCodes: resolvedGhsCodes,
     physicalForm: normalizeFlatString(safe.physicalForm ?? fallback.physicalForm),
     concentration: normalizeFlatString(safe.concentration ?? fallback.concentration),
     notes: normalizeFlatString(safe.notes ?? fallback.notes),
@@ -611,6 +613,16 @@ function normalizeNameDetails(value, baseName = "") {
 
 function normalizeAiCodes(value) {
   return extractHazardCodes(value).join(";");
+}
+
+function resolveAiGhsCodes(reviewed, fallback) {
+  const candidates = [
+    normalizeAiCodes(reviewed?.ghsCodes),
+    normalizeAiCodes(reviewed?.notes),
+    normalizeAiCodes(fallback?.ghsCodes),
+    normalizeAiCodes(fallback?.notes),
+  ].filter(Boolean);
+  return candidates[0] || "";
 }
 
 function buildAiReviewStatus(reviewed) {

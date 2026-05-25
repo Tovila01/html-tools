@@ -155,6 +155,10 @@ const AI_SETTINGS_STORAGE_KEY = "safety-assessment-generator-ai-settings";
 const FIELD_HISTORY_STORAGE_KEY = "safety-assessment-generator-field-history";
 const EXTRACTION_MODE_STORAGE_KEY = "safety-assessment-generator-extraction-mode";
 const WORKBOOK_TEMPLATE_PATH = "./ChemicalRiskAssessment_blank.xlsx";
+const APP_BUILD_INFO = {
+  commit: "",
+  builtAtUtc: "2026-05-25 16:56 UTC",
+};
 const AI_SETTINGS_VERSION = 5;
 const LEGACY_DEFAULT_SYSTEM_PROMPT = [
   "You extract structured chemical safety information from SDS or fact-sheet text.",
@@ -1755,6 +1759,11 @@ async function saveWorkbookFile(workbook, filename, displayName) {
 }
 
 function updateVersionStamp() {
+  if (APP_BUILD_INFO?.builtAtUtc) {
+    const commitSuffix = APP_BUILD_INFO.commit ? ` (${APP_BUILD_INFO.commit})` : "";
+    ui.versionStamp.textContent = `App build: ${APP_BUILD_INFO.builtAtUtc}${commitSuffix}`;
+    return;
+  }
   const stamp = new Date(document.lastModified);
   if (Number.isNaN(stamp.getTime())) {
     ui.versionStamp.textContent = "Last edited: unknown";

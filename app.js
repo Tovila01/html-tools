@@ -190,7 +190,6 @@ let saveDirectoryHandle = null;
 document.querySelector("#chooseFolderButton").addEventListener("click", () => runSafely(chooseSaveFolder));
 document.querySelector("#extractPdfButton").addEventListener("click", () => runSafely(extractFromPdf));
 document.querySelector("#buildButton").addEventListener("click", () => runSafely(buildAssessment));
-document.querySelector("#previewWorkbookButton").addEventListener("click", () => runSafely(previewWorkbook));
 document.querySelector("#downloadButton").addEventListener("click", () => runSafely(downloadWorkbook));
 ui.reviewAssessmentButton.addEventListener("click", () => runSafely(reviewAssessment));
 ui.applyReviewButton.addEventListener("click", () => runSafely(applyReviewSuggestions));

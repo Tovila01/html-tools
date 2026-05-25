@@ -147,7 +147,7 @@ const AI_SETTINGS_STORAGE_KEY = "safety-assessment-generator-ai-settings";
 const FIELD_HISTORY_STORAGE_KEY = "safety-assessment-generator-field-history";
 const EXTRACTION_MODE_STORAGE_KEY = "safety-assessment-generator-extraction-mode";
 const WORKBOOK_TEMPLATE_PATH = "./ChemicalRiskAssessment_blank.xlsx";
-const AI_SETTINGS_VERSION = 4;
+const AI_SETTINGS_VERSION = 5;
 const LEGACY_DEFAULT_SYSTEM_PROMPT = [
   "You extract structured chemical safety information from SDS or fact-sheet text.",
   "Your task is to extract structured information only from the provided source document text.",
@@ -177,6 +177,29 @@ const LEGACY_DEFAULT_SYSTEM_PROMPT = [
   "",
   "Return valid JSON only.",
 ].join("\n");
+const PREVIOUS_GENERAL_SYSTEM_PROMPT = [
+  "You extract structured chemical safety information from source documents.",
+  "Use only the provided text as evidence.",
+  "",
+  "Primary objective:",
+  "Produce conservative, reproducible, machine-readable extraction with no unsupported assumptions.",
+  "",
+  "Rules:",
+  "1. Treat the provided document text as the only source of truth.",
+  "2. Do not use outside knowledge.",
+  "3. Do not invent values, classifications, identifiers, controls, or instructions.",
+  "4. Prefer direct extraction over interpretation.",
+  "5. If a field is missing, unclear, contradictory, or not explicitly supported, leave it empty and report that uncertainty.",
+  "6. If multiple candidate values appear, choose the most explicit document-supported value and mention ambiguity in warnings.",
+  "7. Keep outputs concise, deterministic, and operational.",
+  "8. Do not output prose outside the requested JSON schema.",
+  "9. Keep hazard codes, statements, first aid, handling, storage, disposal, and PPE aligned to what is explicitly present in the source.",
+  "10. Normalize the chemical name to the core name only, while moving supporting qualifiers or descriptors into separate detail fields when available.",
+  "11. Preserve relevant hazard code suffixes and combined classifications exactly when they are present in the source.",
+  "12. Lower confidence when the source appears incomplete, low quality, OCR-corrupted, or internally inconsistent.",
+  "",
+  "Return valid JSON only.",
+].join("\n");
 const DEFAULT_AI_SETTINGS = {
   version: AI_SETTINGS_VERSION,
   provider: "gemini",
@@ -185,24 +208,21 @@ const DEFAULT_AI_SETTINGS = {
   baseUrl: "",
   systemPrompt: [
     "You extract structured chemical safety information from source documents.",
-    "Use only the provided text as evidence.",
+    "Work only from the provided text.",
     "",
     "Primary objective:",
-    "Produce conservative, reproducible, machine-readable extraction with no unsupported assumptions.",
+    "Produce reliable structured extraction with minimal assumptions.",
     "",
     "Rules:",
-    "1. Treat the provided document text as the only source of truth.",
-    "2. Do not use outside knowledge.",
-    "3. Do not invent values, classifications, identifiers, controls, or instructions.",
-    "4. Prefer direct extraction over interpretation.",
-    "5. If a field is missing, unclear, contradictory, or not explicitly supported, leave it empty and report that uncertainty.",
-    "6. If multiple candidate values appear, choose the most explicit document-supported value and mention ambiguity in warnings.",
-    "7. Keep outputs concise, deterministic, and operational.",
-    "8. Do not output prose outside the requested JSON schema.",
-    "9. Keep hazard codes, statements, first aid, handling, storage, disposal, and PPE aligned to what is explicitly present in the source.",
-    "10. Normalize the chemical name to the core name only, while moving supporting qualifiers or descriptors into separate detail fields when available.",
-    "11. Preserve relevant hazard code suffixes and combined classifications exactly when they are present in the source.",
-    "12. Lower confidence when the source appears incomplete, low quality, OCR-corrupted, or internally inconsistent.",
+    "1. Use the document text as the only evidence base.",
+    "2. Do not add information that is not supported by the source.",
+    "3. Prefer explicit document content over inference.",
+    "4. When information is missing, unclear, or conflicting, keep the field empty and report uncertainty.",
+    "5. When multiple possible values appear, prefer the clearest supported value and note ambiguity.",
+    "6. Normalize outputs into a concise and consistent structured form.",
+    "7. Keep related safety details aligned with the content that is explicitly present in the source.",
+    "8. Reduce confidence when the source appears incomplete, noisy, or internally inconsistent.",
+    "9. Return only the requested structured output.",
     "",
     "Return valid JSON only.",
   ].join("\n"),
@@ -1611,6 +1631,7 @@ function normalizeAiSettings(saved) {
   const incomingPrompt = typeof incoming.systemPrompt === "string" ? incoming.systemPrompt.trim() : "";
   const shouldRefreshPrompt = !incomingPrompt
     || incomingPrompt === LEGACY_DEFAULT_SYSTEM_PROMPT
+    || incomingPrompt === PREVIOUS_GENERAL_SYSTEM_PROMPT
     || Number(incoming.version || 0) < AI_SETTINGS_VERSION;
   const migrated = {
     ...effectiveDefaults,

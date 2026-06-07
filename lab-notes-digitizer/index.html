@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lab Notes Digitizer</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./config.local.js"></script>
+    <script defer src="./app.js"></script>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <p class="eyebrow">Lab Notes Digitizer</p>
+        <h1>Turn handwritten lab notes into usable Markdown</h1>
+        <p class="lead">
+          Upload one or more photos from the day, run a vision model over them, and get a structured Markdown lab log you can copy into RemNote or anywhere else.
+        </p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>AI Settings</h2>
+            <p>Stored only in this browser unless you prefill `config.local.js`.</p>
+          </div>
+        </div>
+
+        <div class="grid">
+          <label>
+            <span>Provider</span>
+            <select id="provider">
+              <option value="gemini">Google Gemini</option>
+              <option value="openai">OpenAI-compatible</option>
+            </select>
+          </label>
+          <label>
+            <span>Model</span>
+            <input id="model" type="text" value="gemini-3.5-flash" placeholder="gemini-3.5-flash" />
+          </label>
+          <label>
+            <span>API key</span>
+            <input id="apiKey" type="password" placeholder="Stored locally in this browser" />
+          </label>
+          <label>
+            <span>Base URL</span>
+            <input id="baseUrl" type="text" placeholder="Optional override" />
+          </label>
+        </div>
+
+        <label class="full-width">
+          <span>System prompt</span>
+          <textarea id="systemPrompt" rows="18">You are converting photographed handwritten lab-journal notes into a clean Markdown daily log.
+
+Your job:
+- Read all uploaded note images as one single day of lab work.
+- Extract the actual scientific content, not just visible words.
+- Resolve handwriting ambiguities conservatively.
+- Preserve uncertainty explicitly when text is hard to read.
+
+Output requirements:
+- Return Markdown only.
+- Do not wrap the answer in code fences.
+- Merge information across pages intelligently.
+- Keep the result comprehensive but compact enough to be practical as a daily note.
+- If a detail is unclear, mark it as `[unclear]` instead of inventing content.
+- If figures, sketches, arrows, tables, or reaction schemes appear, summarize what they appear to represent.
+- Preserve experimental sequence where possible.
+
+Use this structure exactly:
+# Lab Journal
+
+## Date
+- If visible, state it
+- If not visible, write `not stated`
+
+## Summary
+- 3 to 6 bullets covering the main work of the day
+
+## Experiments / Work Performed
+- Chronological bullet list of what was done
+
+## Observations
+- Measurements, color changes, yields, spectra references, qualitative observations, anomalies
+
+## Problems / Issues
+- Mistakes, failed steps, contamination, uncertainty, missing data, troubleshooting notes
+
+## Lessons / Insights
+- Explicit takeaways, conclusions, ideas, hypotheses, interpretations
+
+## Action Items
+- Concrete next steps mentioned or strongly implied by the notes
+
+## Raw Fragments Worth Preserving
+- Short bullets for isolated terms, numbers, abbreviations, or unclear fragments that still look important
+
+If the user provides extra context, use it only to disambiguate the notes, not to add new facts.</textarea>
+        </label>
+
+        <div class="toolbar">
+          <button id="saveSettingsButton" class="button" type="button">Save Settings</button>
+          <button id="resetSettingsButton" class="button" type="button">Reset Settings</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Daily Input</h2>
+            <p>Upload all note photos from one day, then analyze them together.</p>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <label class="file-input">
+            <span>Photos</span>
+            <input id="images" type="file" accept="image/*" multiple />
+          </label>
+          <button id="clearImagesButton" class="button" type="button">Clear Images</button>
+          <button id="analyzeButton" class="button button-primary" type="button">Analyze</button>
+        </div>
+
+        <p id="status" class="status">Ready.</p>
+
+        <label class="full-width">
+          <span>Optional context</span>
+          <textarea id="userContext" rows="5" placeholder="Optional: project name, known experiment title, abbreviations, or how you want the Markdown phrased."></textarea>
+        </label>
+
+        <section id="previewGrid" class="preview-grid empty" aria-live="polite">
+          <p class="empty-state">No images selected yet.</p>
+        </section>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Markdown Output</h2>
+            <p>Copy directly into RemNote or keep it as a daily archive.</p>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <button id="copyButton" class="button" type="button">Copy Markdown</button>
+          <button id="downloadButton" class="button" type="button">Download `.md`</button>
+        </div>
+
+        <label class="full-width">
+          <span>Generated Markdown</span>
+          <textarea id="output" rows="22" placeholder="The model output will appear here."></textarea>
+        </label>
+      </section>
+    </main>
+  </body>
+</html>

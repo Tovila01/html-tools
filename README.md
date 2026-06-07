@@ -1,12 +1,14 @@
-# Safety Assessment Generator
+# HTML Tools
 
-Browser-based chemical safety assessment generator.
+Collection repo for standalone browser-based HTML/JavaScript tools.
 
-## Purpose
+## Included tools
 
-This repository is a standalone HTML/JavaScript version of the chemical risk assessment workflow. It runs locally in the browser and is intended to be easy to share and use without a Python desktop app.
+### 1. Safety Assessment Generator
 
-## Features
+The repository root contains the existing chemical risk assessment tool so older download workflows stay compatible.
+
+Features:
 
 - manual chemical risk assessment form
 - AI settings panel for provider, model, API key, base URL, and system prompt
@@ -16,9 +18,8 @@ This repository is a standalone HTML/JavaScript version of the chemical risk ass
 - canonical chemical naming for form fields and downloaded files
 - Excel workbook export aligned more closely to the Python form layout
 - in-browser preview of the generated workbook layout
-- optional local-only `config.local.js` support for machine-specific AI defaults like API key/base URL without committing secrets
 
-## How to use
+How to use:
 
 1. Open `index.html` in a browser.
 2. Optionally upload an SDS PDF and click `Extract from PDF`.
@@ -27,8 +28,27 @@ This repository is a standalone HTML/JavaScript version of the chemical risk ass
 5. Click `Build Assessment` to preview the standardized result.
 6. Click `Download XLSX` to save the workbook.
 
+### 2. Lab Notes Digitizer
+
+The second standalone tool lives in [`lab-notes-digitizer/`](./lab-notes-digitizer/).
+
+Features:
+
+- upload one or more handwritten lab-note photos
+- run a vision model from the browser
+- produce structured Markdown for lab logs
+- copy or download the generated Markdown
+
+How to use:
+
+1. Open `lab-notes-digitizer/index.html` in a browser.
+2. Enter API settings or prefill `config.local.js`.
+3. Upload all note photos from one day.
+4. Click `Analyze`.
+5. Copy or download the generated Markdown.
+
 ## Notes
 
-- The PDF extraction is client-side and deterministic. It does not require a server.
-- The risk rating is rule-based from matched H-codes, not free-form AI scoring.
-- The output is a standardized baseline assessment and does not replace formal EHS review or the original SDS.
+- These tools are static browser apps with no backend required.
+- Optional local-only `config.local.js` files can be used for machine-specific defaults without committing secrets.
+- The root safety assessment tool remains at the repository root intentionally so existing pull/download scripts do not break.

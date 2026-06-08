@@ -4,9 +4,9 @@ Collection repo for standalone browser-based HTML/JavaScript tools.
 
 ## Included tools
 
-### 1. Safety Assessment Generator
+### 1. Risk Assessment Generator
 
-The repository root contains the existing chemical risk assessment tool so older download workflows stay compatible.
+Lives in [`risk-assessment-generator/`](./risk-assessment-generator/).
 
 Features:
 
@@ -21,7 +21,7 @@ Features:
 
 How to use:
 
-1. Open `index.html` in a browser.
+1. Open `risk-assessment-generator/index.html` in a browser.
 2. Optionally upload an SDS PDF and click `Extract from PDF`.
 3. Review and edit the fields.
 4. Adjust AI settings if needed. They are stored locally in the browser.
@@ -30,7 +30,7 @@ How to use:
 
 ### 2. Lab Notes Digitizer
 
-The second standalone tool lives in [`lab-notes-digitizer/`](./lab-notes-digitizer/).
+Lives in [`lab-notes-digitizer/`](./lab-notes-digitizer/).
 
 Features:
 
@@ -49,6 +49,6 @@ How to use:
 
 ## Notes
 
+- Each standalone app now has its own folder in the repo.
 - These tools are static browser apps with no backend required.
 - Optional local-only `config.local.js` files can be used for machine-specific defaults without committing secrets.
-- The root safety assessment tool remains at the repository root intentionally so existing pull/download scripts do not break.

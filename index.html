@@ -3,375 +3,135 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Safety Assessment Generator</title>
-    <link rel="stylesheet" href="./styles.css" />
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-    <script src="./config.local.js"></script>
-    <script defer src="./app.js"></script>
+    <title>HTML Tools</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4efe6;
+        --panel: rgba(255, 252, 247, 0.92);
+        --ink: #1f2933;
+        --muted: #586574;
+        --line: rgba(31, 41, 51, 0.12);
+        --accent: #0e7490;
+        --accent-strong: #155e75;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, rgba(14, 116, 144, 0.18), transparent 28%),
+          radial-gradient(circle at bottom right, rgba(180, 83, 9, 0.12), transparent 24%),
+          var(--bg);
+      }
+
+      main {
+        width: min(920px, calc(100% - 32px));
+        margin: 48px auto;
+      }
+
+      .hero,
+      .tool {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        box-shadow: 0 16px 40px rgba(31, 41, 51, 0.08);
+      }
+
+      .hero {
+        padding: 32px;
+        margin-bottom: 20px;
+      }
+
+      .hero p {
+        margin: 0 0 12px;
+        color: var(--muted);
+      }
+
+      h1,
+      h2 {
+        margin: 0 0 12px;
+      }
+
+      .tools {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 20px;
+      }
+
+      .tool {
+        padding: 24px;
+      }
+
+      .tool p {
+        margin: 0 0 18px;
+        color: var(--muted);
+      }
+
+      .actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 14px;
+        border-radius: 999px;
+        text-decoration: none;
+        font-weight: 600;
+        border: 1px solid var(--accent);
+      }
+
+      .button.primary {
+        background: var(--accent);
+        color: #fff;
+      }
+
+      .button.secondary {
+        color: var(--accent-strong);
+        background: transparent;
+      }
+    </style>
   </head>
   <body>
-    <main class="shell">
+    <main>
       <section class="hero">
-        <p class="eyebrow">Safety Assessment Generator</p>
-        <h1>Standardized chemical risk assessments in the browser</h1>
-        <p class="lead">
-          Extract baseline safety data from an SDS PDF, normalize the chemical name,
-          apply deterministic hazard rules, and export a compact workbook.
-        </p>
-        <p id="versionStamp" class="version-stamp">Last edited: loading...</p>
+        <p>Standalone browser tools</p>
+        <h1>HTML Tools</h1>
+        <p>Each tool now lives in its own folder so the repo stays predictable as more apps get added.</p>
       </section>
 
-      <section class="panel">
-        <div class="panel-header">
-          <h2>AI Settings</h2>
-          <p>Adjust provider, model, API key, and prompt behavior.</p>
-        </div>
-
-        <div class="grid">
-          <label>
-            <span>AI provider</span>
-            <select id="aiProvider">
-              <option value="openai">OpenAI</option>
-              <option value="anthropic">Anthropic</option>
-              <option value="groq">Groq</option>
-              <option value="gemini" selected>Google Gemini</option>
-              <option value="openrouter">OpenRouter</option>
-              <option value="custom">Custom OpenAI-compatible</option>
-            </select>
-          </label>
-          <label>
-            <span>Model</span>
-            <input id="aiModel" type="text" value="gemini-3.5-flash" placeholder="gemini-3.5-flash" />
-          </label>
-          <label>
-            <span>API key</span>
-            <input id="aiApiKey" type="password" placeholder="Enter your API key. Stored locally in this browser" />
-          </label>
-          <label>
-            <span>Base URL</span>
-            <input id="aiBaseUrl" type="text" placeholder="Optional custom endpoint" />
-          </label>
-        </div>
-
-        <label class="full-width">
-          <span>System prompt</span>
-          <textarea id="aiSystemPrompt" rows="18">You extract structured chemical safety information from source documents.
-Work only from the provided text.
-
-Primary objective:
-Produce reliable structured extraction with minimal assumptions.
-
-Rules:
-1. Use the document text as the only evidence base.
-2. Do not add information that is not supported by the source.
-3. Prefer explicit document content over inference.
-4. When information is missing, unclear, or conflicting, keep the field empty and report uncertainty.
-5. When multiple possible values appear, prefer the clearest supported value and note ambiguity.
-6. Normalize outputs into a concise and consistent structured form.
-7. Keep related safety details aligned with the content that is explicitly present in the source.
-8. Reduce confidence when the source appears incomplete, noisy, or internally inconsistent.
-9. Return only the requested structured output.
-
-Return valid JSON only.</textarea>
-        </label>
-
-        <div class="toolbar settings-toolbar">
-          <button id="saveAiSettingsButton" class="button" type="button">Save AI Settings</button>
-          <button id="resetAiSettingsButton" class="button" type="button">Reset AI Settings</button>
-        </div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-header">
-          <h2>Input</h2>
-          <p>Upload a PDF or fill the fields manually.</p>
-        </div>
-
-        <div class="toolbar">
-          <label class="file-input">
-            <span>SDS PDF</span>
-            <input id="pdfFile" type="file" accept="application/pdf" />
-          </label>
-          <label class="inline-select extraction-mode-control">
-            <span>PDF extraction mode</span>
-            <select id="pdfExtractionMode">
-              <option value="ocr" selected>OCR / local parser</option>
-              <option value="ai">AI full fill</option>
-            </select>
-          </label>
-          <button id="chooseFolderButton" class="button" type="button">Choose Save Folder</button>
-          <button id="extractPdfButton" class="button button-primary" type="button">Extract from PDF</button>
-          <button id="buildButton" class="button" type="button">Build Assessment</button>
-          <button id="clearAssessmentButton" class="button" type="button">Clear Assessment</button>
-          <button id="downloadButton" class="button button-accent" type="button">Download XLSX</button>
-        </div>
-
-        <p id="status" class="status">Ready.</p>
-        <p id="saveFolderStatus" class="save-folder-status">Save folder: browser download default</p>
-
-        <div class="grid">
-          <label>
-            <span>Chemical name</span>
-            <input id="name" type="text" />
-          </label>
-          <label>
-            <span>CAS</span>
-            <input id="cas" type="text" />
-          </label>
-          <label>
-            <span>GHS codes</span>
-            <input id="ghsCodes" type="text" placeholder="H225;H319;H336" />
-          </label>
-          <label>
-            <span>Physical form</span>
-            <input id="physicalForm" type="text" />
-          </label>
-          <label>
-            <span>Concentration</span>
-            <input id="concentration" type="text" />
-          </label>
-          <label>
-            <span>Assessor</span>
-            <input id="assessor" type="text" list="assessorOptions" />
-            <datalist id="assessorOptions"></datalist>
-          </label>
-          <label>
-            <span>Location</span>
-            <input id="location" type="text" list="locationOptions" />
-            <datalist id="locationOptions"></datalist>
-          </label>
-          <label>
-            <span>Date</span>
-            <input id="date" type="text" />
-          </label>
-          <label>
-            <span>People count</span>
-            <input id="peopleCount" type="text" value="" />
-          </label>
-          <label>
-            <span>Supervisor</span>
-            <input id="supervisor" type="text" />
-          </label>
-        </div>
-
-        <label class="full-width">
-          <span>Notes</span>
-          <textarea id="notes" rows="4"></textarea>
-        </label>
-      </section>
-
-      <section class="panel output-panel">
-        <div class="panel-header">
-          <h2>Assessment</h2>
-          <p>Deterministic output from the current form state.</p>
-        </div>
-
-        <div class="summary">
-          <article class="summary-card">
-            <span class="summary-label">Risk rating</span>
-            <strong id="riskRating">-</strong>
-          </article>
-          <article class="summary-card">
-            <span class="summary-label">Hazard tags</span>
-            <strong id="hazardTags">-</strong>
-          </article>
-          <article class="summary-card">
-            <span class="summary-label">Recommended PPE</span>
-            <strong id="ppeSummary">-</strong>
-          </article>
-        </div>
-
-        <details class="manual-risk-panel">
-          <summary class="expandable-summary">
-            <span>Manual Risk Override</span>
-            <small>Optional user override. Automatic method stays default.</small>
-          </summary>
-
-          <div class="expandable-body">
-            <div class="panel-header manual-risk-header">
-              <h3>Manual Risk Override</h3>
-              <p>Use your own reasoning to assess hazard, severity, and probability.</p>
-            </div>
-
-            <label class="manual-risk-toggle">
-              <span>Use manual risk rating</span>
-              <input id="manualRiskEnabled" type="checkbox" />
-            </label>
-
-            <div class="manual-risk-grid">
-              <label>
-                <span>Hazard score (0 to 4)</span>
-                <input id="manualHazardScore" type="range" min="0" max="4" step="1" value="2" />
-                <small id="manualHazardDisplay">2 - Moderate hazard</small>
-              </label>
-              <label>
-                <span>Severity</span>
-                <select id="manualSeverity">
-                  <option value="low">Low</option>
-                  <option value="medium" selected>Medium</option>
-                  <option value="high">High</option>
-                </select>
-              </label>
-              <label>
-                <span>Probability</span>
-                <select id="manualProbability">
-                  <option value="unlikely">Unlikely</option>
-                  <option value="likely" selected>Likely</option>
-                  <option value="highly_likely">Highly likely</option>
-                </select>
-              </label>
-            </div>
-
-            <p id="manualRiskSummary" class="method-note">
-              Manual matrix score: 4. Manual risk level: Medium.
-            </p>
+      <section class="tools">
+        <article class="tool">
+          <h2>Risk Assessment Generator</h2>
+          <p>Build standardized chemical risk assessments from SDS data and export the result as XLSX.</p>
+          <div class="actions">
+            <a class="button primary" href="./risk-assessment-generator/">Open app</a>
+            <a class="button secondary" href="./risk-assessment-generator/index.html">Direct entry</a>
           </div>
-        </details>
+        </article>
 
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Area</th>
-                <th>Hazard</th>
-                <th>Risk</th>
-                <th>Protection / Prevention</th>
-                <th>Rating</th>
-              </tr>
-            </thead>
-            <tbody id="hazardTableBody"></tbody>
-          </table>
-        </div>
-
-        <div class="detail-grid">
-          <article class="detail-card">
-            <h3>Firefighting</h3>
-            <p id="fireText">-</p>
-          </article>
-          <article class="detail-card">
-            <h3>Spill Precautions</h3>
-            <p id="spillPrecautions">-</p>
-          </article>
-          <article class="detail-card">
-            <h3>Spill Cleanup</h3>
-            <p id="spillCleanup">-</p>
-          </article>
-          <article class="detail-card">
-            <h3>First Aid</h3>
-            <ul id="firstAidList"></ul>
-          </article>
-        </div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-header">
-          <h2>Risk Rating Method</h2>
-          <p>Reference explanation for how a chemical risk rating can be assessed.</p>
-        </div>
-
-        <details class="method-panel">
-          <summary class="expandable-summary">
-            <span>Open Risk Rating Explanation</span>
-            <small>Reference method and action bands</small>
-          </summary>
-
-          <div class="expandable-body">
-            <div class="method-grid">
-              <article class="detail-card">
-                <h3>1. Identify the Hazards</h3>
-                <p>Most workplaces start from standardized hazard information such as GHS / CLP or NFPA-style hazard levels.</p>
-                <ul class="method-list">
-                  <li><strong>0</strong>: Minimal hazard</li>
-                  <li><strong>1</strong>: Slight hazard</li>
-                  <li><strong>2</strong>: Moderate hazard</li>
-                  <li><strong>3</strong>: Serious hazard</li>
-                  <li><strong>4</strong>: Extreme or severe danger</li>
-                </ul>
-              </article>
-
-              <article class="detail-card">
-                <h3>2. Assess Severity</h3>
-                <ul class="method-list">
-                  <li><strong>Low</strong>: Minor injury or reversible health effects</li>
-                  <li><strong>Medium</strong>: Medical treatment required</li>
-                  <li><strong>High</strong>: Serious injury, long-term health effects, or death</li>
-                </ul>
-              </article>
-
-              <article class="detail-card">
-                <h3>3. Assess Probability</h3>
-                <ul class="method-list">
-                  <li><strong>Unlikely</strong>: Adverse event occurs only rarely</li>
-                  <li><strong>Likely</strong>: Event occurs on a frequent basis</li>
-                  <li><strong>Highly likely</strong>: Adverse event is almost certain to occur</li>
-                </ul>
-              </article>
-            </div>
-
-            <div class="table-wrap method-table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Risk level</th>
-                    <th>Matrix score</th>
-                    <th>Action required</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>Low</td>
-                    <td>1 to 2</td>
-                    <td>Acceptable. Maintain existing controls. No further action normally needed.</td>
-                  </tr>
-                  <tr>
-                    <td>Medium</td>
-                    <td>3 to 6</td>
-                    <td>Tolerable. Review whether extra controls such as ventilation or PPE are justified.</td>
-                  </tr>
-                  <tr>
-                    <td>High</td>
-                    <td>8 to 16</td>
-                    <td>Unacceptable. Stop the process until engineering and safety controls are in place.</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <p class="method-note">
-              Current app behavior: this tool still uses a simplified internal worst-case method based on extracted H-codes. It does not yet calculate a full exposure-based probability × severity matrix automatically.
-            </p>
+        <article class="tool">
+          <h2>Lab Notes Digitizer</h2>
+          <p>Turn handwritten lab-note photos into structured Markdown directly in the browser.</p>
+          <div class="actions">
+            <a class="button primary" href="./lab-notes-digitizer/">Open app</a>
+            <a class="button secondary" href="./lab-notes-digitizer/index.html">Direct entry</a>
           </div>
-        </details>
-      </section>
-
-      <section class="panel">
-        <div class="panel-header">
-          <h2>Assessment Review</h2>
-          <p>Run a final AI check and apply suggested corrections.</p>
-        </div>
-
-        <div class="toolbar review-toolbar">
-          <button id="reviewAssessmentButton" class="button" type="button">Review Assessment</button>
-          <button id="applyReviewButton" class="button" type="button" disabled>Apply Suggested Changes</button>
-        </div>
-
-        <p id="reviewStatus" class="review-status">AI review idle.</p>
-
-        <div id="reviewSuggestions" class="review-panel empty">
-          No review suggestions yet.
-        </div>
-      </section>
-
-      <section class="panel workbook-panel">
-        <div class="panel-header">
-          <h2>Workbook Preview</h2>
-          <p>Browser preview of the generated Excel form layout.</p>
-        </div>
-
-        <div id="workbookPreviewMeta" class="workbook-meta">No workbook generated yet.</div>
-        <div id="workbookPreview" class="workbook-preview empty">
-          Generate or preview the XLSX to inspect the form in the browser.
-        </div>
+        </article>
       </section>
     </main>
   </body>
